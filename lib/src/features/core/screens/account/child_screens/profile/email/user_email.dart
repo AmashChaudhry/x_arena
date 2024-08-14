@@ -263,27 +263,30 @@ class _UserEmailState extends State<UserEmail> {
                             : GestureDetector(
                                 onTap: () async {
                                   if (formKey.currentState!.validate()) {
+                                    setState(() {
+                                      isLoading = true;
+                                    });
                                     final querySnapshot = await userCollection.where('Email', isEqualTo: emailController.text).get();
                                     if (querySnapshot.docs.isNotEmpty) {
                                       errorMessage('Email already exists');
-                                    } else if (passwordController.text != userSnapshot?['Password']) {
-                                      errorMessage('Incorrect password');
                                     } else {
-                                      setState(() {
-                                        isLoading = true;
-                                      });
-                                      await userCollection.doc(user?.uid).update({'Email': emailController.text});
-                                      final credential = EmailAuthProvider.credential(email: user!.email.toString(), password: userSnapshot?['Password']);
-                                      await user!.reauthenticateWithCredential(credential).then((value) {
-                                        user!.updateEmail(emailController.text);
-                                      });
-                                      await Future.delayed(const Duration(seconds: 3), () {
-                                        Get.to(() => const VerifyEmailAddress());
-                                      });
-                                      setState(() {
-                                        isLoading = false;
-                                      });
+                                      try {
+                                        final credential = EmailAuthProvider.credential(email: user!.email.toString(), password: passwordController.text);
+                                        await user!.reauthenticateWithCredential(credential).then((value) async {
+                                          await user!.updateEmail(emailController.text).then((value) async {
+                                            await userCollection.doc(user?.uid).update({'Email': emailController.text});
+                                          });
+                                          await Future.delayed(const Duration(seconds: 3), () {
+                                            Get.to(() => const VerifyEmailAddress());
+                                          });
+                                        });
+                                      } catch (e) {
+                                        errorMessage('Incorrect password');
+                                      }
                                     }
+                                    setState(() {
+                                      isLoading = false;
+                                    });
                                   }
                                 },
                                 child: Container(
