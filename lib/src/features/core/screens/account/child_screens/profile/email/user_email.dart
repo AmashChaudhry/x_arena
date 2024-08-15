@@ -269,9 +269,8 @@ class _UserEmailState extends State<UserEmail> {
                                   await user!.reauthenticateWithCredential(credential).then((value) async {
                                     await user!.updateEmail(emailController.text).then((value) async {
                                       await userCollection.doc(user?.uid).update({'Email': emailController.text});
-                                    });
-                                    await Future.delayed(const Duration(seconds: 3), () {
-                                      Get.to(() => const VerifyEmailAddress());
+                                    }).then((value) {
+                                      Get.offAll(() => const VerifyEmailAddress());
                                     });
                                   });
                                 } catch (e) {

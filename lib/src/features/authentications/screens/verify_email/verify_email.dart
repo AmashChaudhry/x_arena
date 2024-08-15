@@ -18,28 +18,24 @@ class VerifyEmailAddress extends StatefulWidget {
 
 class _VerifyEmailAddressState extends State<VerifyEmailAddress> {
   bool isEmailVerified = false;
-  bool isButtonDisabled = true;
-  String? currentUserEmail;
-  int countdown = 60;
+  RxBool isButtonDisabled = true.obs;
+  RxInt countdown = 60.obs;
   Timer? timer;
 
   @override
   void initState() {
     super.initState();
     isEmailVerified = FirebaseAuth.instance.currentUser!.emailVerified;
-    currentUserEmail = FirebaseAuth.instance.currentUser!.email;
     if (!isEmailVerified) {
       sendVerificationEmail();
       timer = Timer.periodic(const Duration(seconds: 3), (_) => checkEmailVerified());
     }
     Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (countdown > 0) {
-        setState(() {
-          countdown--;
-        });
+      if (countdown.value > 0) {
+        countdown.value--;
       } else {
         timer.cancel();
-        isButtonDisabled = false;
+        isButtonDisabled.value = false;
       }
     });
   }
@@ -57,9 +53,7 @@ class _VerifyEmailAddressState extends State<VerifyEmailAddress> {
 
   Future checkEmailVerified() async {
     await FirebaseAuth.instance.currentUser!.reload();
-    setState(() {
-      isEmailVerified = FirebaseAuth.instance.currentUser!.emailVerified;
-    });
+    isEmailVerified = FirebaseAuth.instance.currentUser!.emailVerified;
     if (isEmailVerified) {
       timer?.cancel();
       Get.offAll(() => const BottomNavBar());
@@ -137,53 +131,50 @@ class _VerifyEmailAddressState extends State<VerifyEmailAddress> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          SizedBox(
-                            height: 40,
-                            width: 250,
-                            child: isButtonDisabled
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Resend again in $countdown sec.',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : ElevatedButton(
-                                    onPressed: () {
-                                      sendVerificationEmail();
-                                      setState(() {
-                                        isButtonDisabled = true;
-                                        countdown = 60;
-                                      });
-                                      Timer.periodic(const Duration(seconds: 1), (timer) {
-                                        if (countdown > 0) {
-                                          setState(() {
-                                            countdown--;
-                                          });
-                                        } else {
-                                          timer.cancel();
-                                          setState(() {
-                                            isButtonDisabled = false;
-                                          });
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
+                          Obx(
+                            () => SizedBox(
+                              height: 40,
+                              width: 250,
+                              child: isButtonDisabled.value
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(5),
                                       ),
-                                      side: BorderSide.none,
+                                      child: Center(
+                                        child: Text(
+                                          'Resend again in $countdown sec.',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : ElevatedButton(
+                                      onPressed: () {
+                                        sendVerificationEmail();
+                                        isButtonDisabled.value = true;
+                                        countdown.value = 60;
+                                        Timer.periodic(const Duration(seconds: 1), (timer) {
+                                          if (countdown.value > 0) {
+                                            countdown.value--;
+                                          } else {
+                                            timer.cancel();
+                                            isButtonDisabled.value = false;
+                                          }
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(5),
+                                        ),
+                                        side: BorderSide.none,
+                                      ),
+                                      child: const Text('Resend verification link'),
                                     ),
-                                    child: const Text('Resend verification link'),
-                                  ),
+                            ),
                           ),
                           TextButton(
                             onPressed: () {
